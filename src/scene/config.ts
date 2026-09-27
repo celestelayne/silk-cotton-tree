@@ -16,6 +16,11 @@ export const CAMERA_PITCH = Math.atan(
 export const SKY_DISTANCE = 200
 // Extra sky beyond the visible frame, so edges stay hidden.
 export const SKY_OVERSCAN = 1.1
+// Horizontal arc the sky cylinder wraps around the viewer. Wider values curve
+// more into peripheral vision; must exceed the camera's horizontal FOV plus
+// margin, and be wide enough that image height (derived via aspect) covers
+// the vertical FOV.
+export const SKY_ARC = MathUtils.degToRad(150)
 
 // Sampled from the image: the far sea just below the horizon, and the near sea.
 export const FOG_COLOR = '0xDFE9F3'
