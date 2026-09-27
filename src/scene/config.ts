@@ -38,3 +38,12 @@ export const MIST_RADIUS = 190
 
 export const OCEAN_COLOR = '#182221'
 export const OCEAN_SIZE = 800
+
+// Water surface (three/addons Water). No sun highlight is enabled, so the
+// tunables here shape ripple/reflection character.
+// How much the reflection warps across the surface — higher = choppier.
+export const WATER_DISTORTION = 6
+// Normal-map tile size in world units. Smaller = larger apparent ripples.
+export const WATER_SIZE = 2
+// Reflection render-target resolution (square). Higher = sharper, slower.
+export const WATER_TEXTURE_RES = 512
