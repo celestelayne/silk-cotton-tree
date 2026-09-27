@@ -47,3 +47,14 @@ export const WATER_DISTORTION = 6
 export const WATER_SIZE = 2
 // Reflection render-target resolution (square). Higher = sharper, slower.
 export const WATER_TEXTURE_RES = 512
+
+// Drag-to-look tuning.
+// Max degrees from forward the camera can look (in each direction).
+export const LOOK_YAW_DEG = 20
+export const LOOK_PITCH_DEG = 10
+// Per-frame lerp toward the initial orbit position when the user isn't
+// dragging. Smaller = slower, gentler return.
+export const LOOK_RETURN_ALPHA = 0.02
+// Per-frame slerp of the main camera toward the dummy — the "input lag."
+// Smaller = heavier lag, more cinematic drift.
+export const LOOK_LAG_ALPHA = 0.06

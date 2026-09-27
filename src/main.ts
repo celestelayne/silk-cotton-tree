@@ -1,5 +1,6 @@
 import {
   Color,
+  MathUtils,
   NoToneMapping,
   PerspectiveCamera,
   Scene,
@@ -8,7 +9,16 @@ import {
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import './styles.css'
-import { CAMERA_HEIGHT, CAMERA_PITCH, FOG_COLOR, FOV } from './scene/config'
+import {
+  CAMERA_HEIGHT,
+  CAMERA_PITCH,
+  FOG_COLOR,
+  FOV,
+  LOOK_LAG_ALPHA,
+  LOOK_PITCH_DEG,
+  LOOK_RETURN_ALPHA,
+  LOOK_YAW_DEG,
+} from './scene/config'
 import { createHorizonMist } from './scene/HorizonMist'
 import { createOcean } from './scene/Ocean'
 import { createSky } from './scene/Sky'
@@ -31,16 +41,40 @@ const camera = new PerspectiveCamera(FOV, 1, 0.1, 1000)
 camera.position.set(0, CAMERA_HEIGHT, 0)
 camera.rotation.set(CAMERA_PITCH, 0, 0)
 
-// Look around in place: orbiting a target just in front of the camera turns it without moving it.
-// Read the direction before creating the controls: the constructor points the camera at the origin.
-const initialTarget = camera.getWorldDirection(new Vector3()).multiplyScalar(0.01).add(camera.position)
-const controls = new OrbitControls(camera, canvas)
+// Drag-to-look: OrbitControls drives a dummy camera around a target just in
+// front of it. The real camera slerps toward the dummy each frame (input-lag
+// smoothing). When the user isn't dragging, the dummy eases back toward its
+// starting position so the look direction drifts back to forward.
+const dummy = new PerspectiveCamera(FOV, 1, 0.1, 1000)
+dummy.position.copy(camera.position)
+dummy.rotation.copy(camera.rotation)
+
+const initialTarget = camera
+  .getWorldDirection(new Vector3())
+  .multiplyScalar(0.01)
+  .add(camera.position)
+const initialDummyPosition = dummy.position.clone()
+
+const controls = new OrbitControls(dummy, canvas)
 controls.target.copy(initialTarget)
-controls.enableDamping = true
 // Zoom and pan would move the camera off its spot.
 controls.enableZoom = false
 controls.enablePan = false
+// Smoothing is done via the main-camera lerp below.
+controls.enableDamping = false
 controls.update()
+
+// Clamp the drag to a narrow range around the initial look direction.
+const initialAz = controls.getAzimuthalAngle()
+const initialPo = controls.getPolarAngle()
+controls.minAzimuthAngle = initialAz - MathUtils.degToRad(LOOK_YAW_DEG)
+controls.maxAzimuthAngle = initialAz + MathUtils.degToRad(LOOK_YAW_DEG)
+controls.minPolarAngle = initialPo - MathUtils.degToRad(LOOK_PITCH_DEG)
+controls.maxPolarAngle = initialPo + MathUtils.degToRad(LOOK_PITCH_DEG)
+
+let isDragging = false
+controls.addEventListener('start', () => (isDragging = true))
+controls.addEventListener('end', () => (isDragging = false))
 
 // Build the scene layers: the sky (backdrop), the ocean (ground), and the mist band over the horizon.
 const sky = createSky()
@@ -62,7 +96,14 @@ resize()
 
 // Render loop: reposition sky/ocean/mist to follow the camera, then draw a frame.
 renderer.setAnimationLoop(() => {
+  // Auto-return: while idle, ease the dummy's position back toward its start,
+  // which pulls the orbit angle back toward forward.
+  if (!isDragging) {
+    dummy.position.lerp(initialDummyPosition, LOOK_RETURN_ALPHA)
+  }
   controls.update()
+  // Input-lag smoothing: the main camera catches up to the dummy over multiple frames.
+  camera.quaternion.slerp(dummy.quaternion, LOOK_LAG_ALPHA)
   sky.update(camera)
   ocean.update(camera)
   mist.update(camera)
