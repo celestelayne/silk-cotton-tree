@@ -23,7 +23,18 @@ export const SKY_OVERSCAN = 1.1
 export const SKY_ARC = MathUtils.degToRad(150)
 
 // Sampled from the image: the far sea just below the horizon, and the near sea.
-export const FOG_COLOR = '0xDFE9F3'
-export const FOG_DENSITY = 0.015
+export const FOG_COLOR = 0xDFE9F3
+
+// Horizon mist band: a ring centered on the horizon that fades out above and below it.
+export const MIST_COLOR = 0xc6cace
+// Opacity at the horizon line (0–1).
+export const MIST_OPACITY = 0.8
+// How far the band reaches above and below the horizon, in degrees.
+export const MIST_SPREAD_DEG = 6
+// Fade shape: 1 is a soft even fade; higher values tighten the mist toward the horizon line.
+export const MIST_FALLOFF = 1.5
+// Just inside the sky cylinder, so the band sits in front of it.
+export const MIST_RADIUS = 190
+
 export const OCEAN_COLOR = '#182221'
 export const OCEAN_SIZE = 800

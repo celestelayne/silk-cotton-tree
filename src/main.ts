@@ -1,6 +1,5 @@
 import {
   Color,
-  FogExp2,
   NoToneMapping,
   PerspectiveCamera,
   Scene,
@@ -9,7 +8,8 @@ import {
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import './styles.css'
-import { CAMERA_HEIGHT, CAMERA_PITCH, FOG_COLOR, FOG_DENSITY, FOV } from './scene/config'
+import { CAMERA_HEIGHT, CAMERA_PITCH, FOG_COLOR, FOV } from './scene/config'
+import { createHorizonMist } from './scene/HorizonMist'
 import { createOcean } from './scene/Ocean'
 import { createSky } from './scene/Sky'
 
@@ -22,10 +22,9 @@ const renderer = new WebGLRenderer({ canvas, antialias: true })
 renderer.toneMapping = NoToneMapping
 renderer.setPixelRatio(window.devicePixelRatio)
 
-// Scene with exponential fog so the ocean fades into the sky at the horizon.
+// Scene. No scene fog: the horizon mist band softens where the sky meets the ocean.
 const scene = new Scene()
 scene.background = new Color(FOG_COLOR)
-scene.fog = new FogExp2(FOG_COLOR, FOG_DENSITY)
 
 // Camera pitched up by CAMERA_PITCH so the scene horizon aligns with the image horizon.
 const camera = new PerspectiveCamera(FOV, 1, 0.1, 1000)
@@ -43,10 +42,11 @@ controls.enableZoom = false
 controls.enablePan = false
 controls.update()
 
-// Build the two scene layers: the sky plane (backdrop) and the ocean plane (ground).
+// Build the scene layers: the sky (backdrop), the ocean (ground), and the mist band over the horizon.
 const sky = createSky()
 const ocean = createOcean()
-scene.add(sky.mesh, ocean.mesh)
+const mist = createHorizonMist()
+scene.add(sky.mesh, ocean.mesh, mist.mesh)
 
 // Keep the renderer, camera aspect, and sky geometry in sync with the window size.
 function resize() {
@@ -60,10 +60,11 @@ function resize() {
 window.addEventListener('resize', resize)
 resize()
 
-// Render loop: reposition sky/ocean to follow the camera, then draw a frame.
+// Render loop: reposition sky/ocean/mist to follow the camera, then draw a frame.
 renderer.setAnimationLoop(() => {
   controls.update()
   sky.update(camera)
   ocean.update(camera)
+  mist.update(camera)
   renderer.render(scene, camera)
 })
