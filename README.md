@@ -1,6 +1,6 @@
 # silk cotton tree
 
-A basic 3D scene built with [React Three Fiber](https://r3f.docs.pmnd.rs/) — an orange cube, some lighting, and orbit controls. Scaffolded with Vite + React + TypeScript as a starting point for exploring three.js in a React idiom.
+A small 3D scene: a stormy Atlantic sky wrapped on a partial cylinder around the viewer, a reflective ocean, a horizon mist band, and a drag-to-look camera clamped to a narrow window with input-lag smoothing. Built with vanilla [three.js](https://threejs.org/), [Vite](https://vite.dev/), and TypeScript.
 
 ## Getting started
 
@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Open the URL Vite prints (usually `http://localhost:5173`). You should see an orange cube on a dark background. Drag to orbit, scroll to zoom.
+Open the URL Vite prints (usually `http://localhost:5173`). Drag to look around — the camera is clamped and drifts back to forward when idle.
 
 ## Scripts
 
@@ -25,30 +25,39 @@ Open the URL Vite prints (usually `http://localhost:5173`). You should see an or
 ```
 silk-cotton-tree/
 ├── index.html
-├── assets/                # Static assets outside the bundle
+├── assets/                   # Imported through Vite for hashed URLs
+│   ├── storm-over-atlantic-01.png
+│   └── waternormals.jpg
+├── .github/workflows/
+│   └── deploy.yml            # Builds and pushes dist/ to gh-pages on push to main
 └── src/
-    ├── main.tsx           # React root
-    ├── App.tsx            # <Canvas> — boundary between DOM and R3F
-    ├── styles.css         # Full-viewport canvas styles
+    ├── main.ts               # Renderer, scene, camera, drag-to-look rig, animation loop
+    ├── styles.css            # Full-viewport canvas styles
     └── scene/
-        ├── Scene.tsx      # Lights + OrbitControls, composes the world
-        └── Box.tsx        # Rotating cube (useFrame animates it)
+        ├── config.ts         # All tunables — camera, sky arc, mist, water, look controls
+        ├── Sky.ts            # Inward-facing cylinder-segment backdrop
+        ├── Ocean.ts          # Reflective water via three/addons Water
+        └── HorizonMist.ts    # Shader-driven ring that fades above and below eye level
 ```
 
-The convention: **one component per mesh / light group / camera**, each in `src/scene/`. Every object owns its own `useFrame`, refs, and state — that's the R3F idiom.
+Each scene layer is a factory function returning `{ mesh, update }` (and sometimes `resize`). `main.ts` calls `update(camera)` on each per frame — the layers keep themselves centered on the camera so the backdrop stays wrapped around the viewer.
+
+## Scene layers
+
+- **Sky** (`Sky.ts`) — a partial cylinder of `SKY_ARC` radians at radius `SKY_DISTANCE`, textured with a storm photo and rendered from the inside (`BackSide`). Height derives from arc length via image aspect so the picture isn't stretched.
+- **Ocean** (`Ocean.ts`) — three's `Water` class from `three/addons`. Planar reflection captures the sky cylinder and mist band; the sun highlight is disabled to hold the overcast mood.
+- **Horizon mist** (`HorizonMist.ts`) — a ring cylinder centered on eye level with a custom shader that fades above and below the horizon, softening the seam where sky meets water.
+- **Drag-to-look** (`main.ts`) — OrbitControls drives a hidden dummy camera with `min/maxAzimuthAngle` and `min/maxPolarAngle` clamps; the real camera slerps its quaternion toward the dummy each frame for lag, and the dummy's position eases back to its start when idle.
+
+## Tuning
+
+All of the knobs — camera height, sky arc, mist opacity and spread, water color and distortion, look yaw/pitch limits, return speed, lag alpha — live in [`src/scene/config.ts`](src/scene/config.ts). Edit a value, save, and Vite HMR reloads.
 
 ## Stack
 
-- [Vite](https://vite.dev/) + React 19 + TypeScript
-- [three](https://threejs.org/) — the underlying 3D library
-- [@react-three/fiber](https://r3f.docs.pmnd.rs/) — React renderer for three.js
-- [@react-three/drei](https://drei.docs.pmnd.rs/) — helpers (used here for `OrbitControls`)
+- Vite + TypeScript
+- three, including the `Water` and `OrbitControls` addons from `three/examples/jsm`
 
-## Growing from here
+## Deployment
 
-Add folders as you actually need them, not before:
-
-- `hooks/` — once you have a reusable one (e.g. `useCursor`)
-- `src/assets/` — when you import `.glb` models or textures through the bundler
-- `shaders/` — for GLSL
-- `store.ts` — for global state (zustand pairs well with R3F)
+`.github/workflows/deploy.yml` runs on every push to `main`: builds with `npm run build` and pushes `dist/` to the `gh-pages` branch. `vite.config.ts` sets `base: './'` so built asset paths resolve under the repo subpath on GitHub Pages.
