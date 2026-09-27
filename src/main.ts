@@ -4,8 +4,10 @@ import {
   NoToneMapping,
   PerspectiveCamera,
   Scene,
+  Vector3,
   WebGLRenderer,
 } from 'three'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import './styles.css'
 import { CAMERA_HEIGHT, CAMERA_PITCH, FOG_COLOR, FOG_DENSITY, FOV } from './scene/config'
 import { createOcean } from './scene/Ocean'
@@ -30,6 +32,17 @@ const camera = new PerspectiveCamera(FOV, 1, 0.1, 1000)
 camera.position.set(0, CAMERA_HEIGHT, 0)
 camera.rotation.set(CAMERA_PITCH, 0, 0)
 
+// Look around in place: orbiting a target just in front of the camera turns it without moving it.
+// Read the direction before creating the controls: the constructor points the camera at the origin.
+const initialTarget = camera.getWorldDirection(new Vector3()).multiplyScalar(0.01).add(camera.position)
+const controls = new OrbitControls(camera, canvas)
+controls.target.copy(initialTarget)
+controls.enableDamping = true
+// Zoom and pan would move the camera off its spot.
+controls.enableZoom = false
+controls.enablePan = false
+controls.update()
+
 // Build the two scene layers: the sky plane (backdrop) and the ocean plane (ground).
 const sky = createSky()
 const ocean = createOcean()
@@ -49,6 +62,7 @@ resize()
 
 // Render loop: reposition sky/ocean to follow the camera, then draw a frame.
 renderer.setAnimationLoop(() => {
+  controls.update()
   sky.update(camera)
   ocean.update(camera)
   renderer.render(scene, camera)
